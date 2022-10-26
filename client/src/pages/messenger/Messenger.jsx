@@ -15,6 +15,7 @@ export default function Messenger() {
   const [newMessage, setNewMessage] = useState("");
   const [arrivalMessage, setArrivalMessage] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [members, setMembers] = useState();
   const socket = useRef();
   const { user } = useContext(AuthContext);
   const scrollRef = useRef();
@@ -27,14 +28,21 @@ export default function Messenger() {
         text: data.text,
         createdAt: Date.now(),
       });
+      setMembers(data.membersChat)
     });
   }, []);
 
   useEffect(() => {
+    console.log(members, currentChat?.members, (members.length == currentChat?.members.length) && members.every(function (element, index) {
+      return element === currentChat?.members[index];
+    }))
     arrivalMessage &&
       currentChat?.members.includes(arrivalMessage.sender) &&
+      (members.length == currentChat?.members.length) && members.every(function (element, index) {
+        return element === currentChat?.members[index];
+      }) &&
       setMessages((prev) => [...prev, arrivalMessage]);
-  }, [arrivalMessage, currentChat]);
+  }, [arrivalMessage, currentChat, members]);
 
   useEffect(() => {
     socket.current.emit("addUser", user._id);
@@ -76,15 +84,17 @@ export default function Messenger() {
       text: newMessage,
       conversationId: currentChat._id,
     };
+    const membersChat = currentChat.members
+    const index = membersChat.findIndex((member) => member === user._id);
 
-    const receiverId = currentChat.members.find(
-      (member) => member !== user._id
-    );
+    membersChat.slice(index, 1)
+    const receiverId = membersChat
 
     socket.current.emit("sendMessage", {
       senderId: user._id,
       receiverId,
       text: newMessage,
+      membersChat: currentChat.members
     });
 
     try {
